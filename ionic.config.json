@@ -1,0 +1,8 @@
+{
+  "name": "Qubi",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular",
+  "id": "5cd14f56"
+}
