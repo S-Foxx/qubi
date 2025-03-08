@@ -74,6 +74,30 @@
         </ion-content>        
       </ion-menu>
       <ion-router-outlet id="main-content"></ion-router-outlet>
+      
+      <!-- Model loading notification -->
+      <div class="model-loading-notification" *ngIf="!modelLoaded">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Loading AI Model</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <ion-progress-bar [value]="getProgressValue()"></ion-progress-bar>
+            <p class="loading-text">{{ loadingProgress }}</p>
+          </ion-card-content>
+        </ion-card>
+      </div>
+      
+      <!-- Model loaded notification -->
+      <div class="model-loaded-notification" *ngIf="modelLoaded">
+        <ion-toast
+          [isOpen]="modelLoaded"
+          message="AI Model loaded successfully!"
+          [duration]="3000"
+          position="top"
+          color="success">
+        </ion-toast>
+      </div>
     </ion-split-pane>
   </div>
 </ion-app>

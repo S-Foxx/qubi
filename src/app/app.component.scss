@@ -235,3 +235,40 @@ ion-item.selected {
   --border-radius: 4px;
   margin-right: 8px;
 }
+
+/* Model loading notification styles */
+.model-loading-notification {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  width: 300px;
+}
+
+.model-loading-notification ion-card {
+  margin: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+}
+
+.model-loading-notification ion-card-header {
+  padding-bottom: 8px;
+}
+
+.model-loading-notification ion-card-content {
+  padding-top: 0;
+}
+
+.loading-text {
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--ion-color-medium);
+}
+
+/* Model loaded notification styles */
+.model-loaded-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+}
