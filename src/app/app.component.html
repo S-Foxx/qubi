@@ -7,16 +7,71 @@
             <ion-list-header>Hi, I'm Qubi</ion-list-header>
             <ion-note>Created by Sabir (Alpha Testing)</ion-note>
 
-            @for (p of appPages; track p; let i = $index) {
-              <ion-menu-toggle auto-hide="false">
-                <ion-item routerDirection="root" [routerLink]="[p.url]" lines="none" detail="false" routerLinkActive="selected">
-                  <ion-icon aria-hidden="true" slot="start" [ios]="p.icon + '-outline'" [md]="p.icon + '-sharp'"></ion-icon>
-                  <ion-label>{{ p.title }}</ion-label>
-                </ion-item>
-              </ion-menu-toggle>
-            }
+            <!-- Inbox with New Chat button -->
+
+            
+            <ion-menu-toggle auto-hide="false">
+              <ion-item lines="none" class="inbox-header-item" detail="false" routerDirection="root" [routerLink]="['/folder/inbox']" routerLinkActive="selected">
+                <ion-icon aria-hidden="true" slot="start" ios="mail-outline" md="mail-sharp"></ion-icon>
+                <ion-label>Inbox</ion-label>
+                <ion-button slot="end" fill="clear" class="new-chat-button" (click)="createNewChat()">
+                  <ion-icon name="add-circle-outline"></ion-icon>
+                  <span>New Chat</span>
+                </ion-button>
+              </ion-item>
+            </ion-menu-toggle>
+
+            <!-- Other menu items -->
+            <ion-menu-toggle auto-hide="false" *ngFor="let p of appPages | slice:1; let i = index">
+              <ion-item routerDirection="root" [routerLink]="[p.url]" lines="none" detail="false" routerLinkActive="selected">
+                <ion-icon aria-hidden="true" slot="start" [ios]="p.icon + '-outline'" [md]="p.icon + '-sharp'"></ion-icon>
+                <ion-label>{{ p.title }}</ion-label>
+              </ion-item>
+            </ion-menu-toggle>
           </ion-list>
-        </ion-content>
+          <ion-list id="conversation-list">
+            <!-- Conversation History -->
+            <div class="conversation-history">
+              <ion-item 
+                *ngFor="let conversation of conversations"
+                lines="none" 
+                [class.selected]="conversation.isActive"
+                (click)="selectConversation(conversation.id)"
+                class="conversation-item">
+                
+                <!-- Conversation title (editable) -->
+                <div class="edit-title-container" *ngIf="editingConversation && editingConversation.id === conversation.id">
+                  <ion-input
+                    #titleInput
+                    [value]="editingConversation.title"
+                    (keyup.enter)="saveTitle(conversation.id, titleInput.value)"
+                    (ionBlur)="saveTitle(conversation.id, titleInput.value)">
+                  </ion-input>
+                  <ion-button fill="clear" size="small" (click)="cancelEditing()">
+                    <ion-icon name="close-outline"></ion-icon>
+                  </ion-button>
+                </div>
+                
+                <ng-container *ngIf="!(editingConversation && editingConversation.id === conversation.id)">
+                  <div class="conversation-details">
+                    <div class="conversation-title">{{ conversation.title }}</div>
+                    <div class="conversation-date">{{ formatDate(conversation.createdAt) }}</div>
+                  </div>
+                  
+                  <!-- Action buttons -->
+                  <div class="conversation-actions">
+                    <ion-button fill="clear" size="small" (click)="startEditingTitle(conversation); $event.stopPropagation()">
+                      <ion-icon name="create-outline"></ion-icon>
+                    </ion-button>
+                    <ion-button fill="clear" size="small" (click)="deleteConversation(conversation.id, $event)">
+                      <ion-icon name="trash-outline"></ion-icon>
+                    </ion-button>
+                  </div>
+                </ng-container>
+              </ion-item>
+            </div>
+          </ion-list>
+        </ion-content>        
       </ion-menu>
       <ion-router-outlet id="main-content"></ion-router-outlet>
     </ion-split-pane>

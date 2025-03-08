@@ -1,11 +1,15 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { IonicModule } from '@ionic/angular';
+import { ConversationComponent } from './components/conversation/conversation.component';
 
 @Component({
   selector: 'app-folder',
   templateUrl: './folder.page.html',
   styleUrls: ['./folder.page.scss'],
-  standalone: false,
+  standalone: true,
+  imports: [IonicModule, CommonModule, ConversationComponent]
 })
 export class FolderPage implements OnInit {
   public folder!: string;

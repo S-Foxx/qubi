@@ -1,0 +1,24 @@
+<div class="conversation-container">
+  <div class="messages-area" #messagesContainer>
+    <div *ngFor="let message of messages" 
+         class="message"
+         [class.user-message]="message.sender === 'user'"
+         [class.bot-message]="message.sender === 'bot'">
+      <div class="message-content">{{ message.text }}</div>
+      <div class="message-timestamp">{{ message.timestamp | date:'short' }}</div>
+    </div>
+  </div>
+  
+  <div class="input-area">
+    <ion-textarea 
+      [(ngModel)]="newMessage" 
+      placeholder="Type your message here..." 
+      [autoGrow]="false"
+      rows="3"
+      class="message-input">
+    </ion-textarea>
+    <ion-button (click)="sendMessage()" [disabled]="!newMessage.trim()" class="send-button">
+      <ion-icon slot="icon-only" name="send"></ion-icon>
+    </ion-button>
+  </div>
+</div>
