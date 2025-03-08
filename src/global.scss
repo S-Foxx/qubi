@@ -35,3 +35,170 @@
 /* @import "@ionic/angular/css/palettes/dark.always.css"; */
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
 @import "@ionic/angular/css/palettes/dark.system.css";
+
+/* Custom app container styling */
+:root {
+  --app-top-bottom-margin: 12vh;
+  --app-left-right-margin: 32vh; /* Twice as much as top/bottom */
+  --app-border-radius: 16px;
+  --panel-gap: 8px; /* Gap between panels */
+  --animation-timing: 0.3s;
+  --animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body {
+  background-color: var(--ion-color-light);
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+ion-app {
+  min-width: 400px;
+  min-height: 300px;
+  width: calc(100% - (var(--app-left-right-margin) * 2));
+  height: calc(100% - (var(--app-top-bottom-margin) * 2));
+  margin: var(--app-top-bottom-margin) var(--app-left-right-margin);
+  border-radius: 0;
+  overflow: visible;
+  box-shadow: none;
+  background-color: var(--ion-color-light);
+}
+
+ion-split-pane {
+  --side-width: 280px;
+  --side-max-width: 280px;
+  background: transparent !important;
+}
+
+/* Style the menu with its own complete border radius */
+ion-menu {
+  --width: calc(var(--side-width) - (var(--panel-gap) / 2));
+  margin-right: var(--panel-gap);
+  border-radius: var(--app-border-radius);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  --background: var(--ion-background-color);
+  transition: box-shadow var(--animation-timing) var(--animation-easing);
+}
+
+ion-menu:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+ion-menu::part(container) {
+  border-radius: var(--app-border-radius);
+}
+
+ion-menu ion-content {
+  --border-radius: var(--app-border-radius);
+}
+
+/* Style for main ion-router-outlet - fully separate with its own border radius */
+ion-router-outlet {
+  border-radius: var(--app-border-radius);
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  background-color: var(--ion-background-color);
+  transition: box-shadow var(--animation-timing) var(--animation-easing);
+}
+
+ion-router-outlet:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+ion-header ion-toolbar:first-of-type {
+  --border-radius: var(--app-border-radius) var(--app-border-radius) 0 0;
+  padding-top: 4px;
+}
+
+ion-menu ion-item {
+  transition: background-color var(--animation-timing) var(--animation-easing),
+              color var(--animation-timing) var(--animation-easing),
+              transform var(--animation-timing) var(--animation-easing);
+}
+
+ion-menu ion-item:hover {
+  transform: translateX(4px);
+}
+
+ion-menu ion-item ion-icon {
+  transition: transform var(--animation-timing) var(--animation-easing);
+}
+
+ion-menu ion-item:hover ion-icon {
+  transform: scale(1.2) rotate(10deg);
+}
+
+ion-button {
+  transition: transform var(--animation-timing) var(--animation-easing),
+              box-shadow var(--animation-timing) var(--animation-easing);
+  overflow: hidden;
+}
+
+ion-button:hover {
+  transform: translateY(-2px);
+}
+
+ion-button:active {
+  transform: translateY(1px);
+}
+
+.send-button {
+  transition: transform var(--animation-timing) var(--animation-easing),
+              background-color var(--animation-timing) var(--animation-easing);
+}
+
+.send-button:hover {
+  transform: scale(1.1) rotate(15deg);
+}
+
+.send-button:active {
+  transform: scale(0.95);
+}
+
+.message {
+  animation: fadeIn 0.3s var(--animation-easing);
+}
+
+ion-menu-button {
+  transition: transform var(--animation-timing) var(--animation-easing);
+}
+
+ion-menu-button:hover {
+  transform: scale(1.15);
+}
+
+ion-title {
+  transition: transform var(--animation-timing) var(--animation-easing),
+              opacity var(--animation-timing) var(--animation-easing);
+}
+
+ion-header:hover ion-title {
+  transform: scale(1.02);
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}

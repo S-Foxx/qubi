@@ -1,188 +1,186 @@
-import { Component, inject, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
-import { ConversationService } from './services/conversation.service';
-import { ConversationSession } from './models/conversation-session.model';
-// Use type-only imports to avoid conflicts
-import type { MLCEngineInterface } from '@mlc-ai/web-llm';
+import { Component, OnInit } from '@angular/core';
+import { IonicModule } from '@ionic/angular';
+import { CommonModule } from '@angular/common';
+import { RouterLink, RouterLinkActive } from '@angular/router';
+import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
+import * as MlcSw from '../sw'
+import { filter } from 'rxjs/operators';
+import * as webllm from '@mlc-ai/web-llm';
+import { DevToolbarComponent } from './components/dev-toolbar/dev-toolbar.component';
+
+interface AppPage {
+  title: string;
+  url: string;
+  icon: string;
+}
 
 @Component({
   selector: 'app-root',
   templateUrl: 'app.component.html',
   styleUrls: ['app.component.scss'],
-  standalone: false,
+  standalone: true,
+  imports: [IonicModule, CommonModule, RouterLink, RouterLinkActive, DevToolbarComponent]
 })
 export class AppComponent implements OnInit {
-  public appPages = [
-    { title: 'Inbox', url: '/folder/inbox', icon: 'mail' },
-    { title: 'Outbox', url: '/folder/outbox', icon: 'paper-plane' },
-    { title: 'Favorites', url: '/folder/favorites', icon: 'heart' },
-    { title: 'Archived', url: '/folder/archived', icon: 'archive' },
-    { title: 'Trash', url: '/folder/trash', icon: 'trash' },
-    { title: 'Spam', url: '/folder/spam', icon: 'warning' },
+  public appPages: AppPage[] = [
+    { title: 'Chat', url: '/chat', icon: 'chatbubbles' },
+    { title: 'Settings', url: '/folder/settings', icon: 'settings' },
+    { title: 'About', url: '/folder/about', icon: 'information-circle' }
   ];
-  public labels = ['Family', 'Friends', 'Notes', 'Work', 'Travel', 'Reminders'];
-  public conversations: ConversationSession[] = [];
-  public editingConversation: ConversationSession | null = null;
-  public folder: string = '';
-  public loadingProgress: string = 'Loading...';
-  public modelLoaded: boolean = false;
-  private conversationService = inject(ConversationService);
-  private router = inject(Router);
-  private engine: MLCEngineInterface | null = null;
-  private progressValue: number = 0;
-
-  constructor() {}
-
-  ngOnInit(): void {
-    this.loadConversations();
-
-    // Register service worker and load model
-    this.registerServiceWorker();
+  
+  modelLoaded: boolean = false;
+  loadingProgress: string = 'Initializing...';
+  progressValue: number = 0;
+  
+  constructor(private swUpdate: SwUpdate) {}
+  
+  ngOnInit() {
+    // First set up service workers
+    this.setupServiceWorker();
+    
+    // Initialize WebLLM after service workers are initialized
+    setTimeout(() => {
+      this.initializeWebLLM();
+    }, 1000);
+    
+    // Check for updates
+    this.checkForUpdates();
   }
-
-  /**
-   * Register the service worker and load the model
-   */
-  private registerServiceWorker(): void {
-    if ('serviceWorker' in navigator) {
-      try {
-        // Use assets/sw.js instead of sw.ts
-        navigator.serviceWorker.register('/assets/sw.js')
-          .then(registration => {
-            console.log('Service Worker registered with scope:', registration.scope);
-            // Load model after service worker is registered
-            this.loadModel();
-          })
-          .catch(error => {
-            console.error('Service Worker registration failed:', error);
-            // If service worker registration fails, still try to load the model directly
-            this.loadModel();
-          });
-      } catch (error) {
-        console.error('Error during Service Worker registration:', error);
-        // If service worker registration throws an error, still try to load the model directly
-        this.loadModel();
-      }
-    } else {
-      console.warn('Service workers are not supported in this browser');
-      // If service workers aren't supported, load the model directly
-      this.loadModel();
-    }
+  
+  getProgressValue(): number {
+    return this.progressValue;
   }
-
-  private async loadModel(): Promise<void> {
+  
+  private async initializeWebLLM() {
     try {
-      const modelName = 'Qwen2.5-1.5B-Instruct-q4f16_1-MLC';
-
-      const initProgressCallback = (report: { text: string; progress: number }) => {
-        this.loadingProgress = `Loading: ${report.text} (${(report.progress * 100).toFixed(0)}%)`;
-        this.progressValue = report.progress;
-        console.log(this.loadingProgress);
+      let engine;
+      const modelId = "gemma-2-2b-it-q4f32_1-MLC";
+      const workerOptions = {
+        initProgressCallback: (report: { text: string; progress: number }) => {
+          this.loadingProgress = report.text;
+          this.progressValue = report.progress;
+          console.log(`WebLLM init progress: ${this.progressValue.toFixed(2)}% - ${this.loadingProgress}`);
+        },
+        // Add cache settings to prevent duplicate downloads
+        cachePaths: {
+          // Use memory cache for WebLLM models to avoid duplicate downloads
+          "model": "memory",
+          "weights": "memory" 
+        }
       };
-
-      // Try to use service worker if available, otherwise fall back to regular engine
-      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-        console.log('Using service worker for model loading');
+      
+      // Check if we have a registered service worker
+      const hasServiceWorker = (window as any).swRegistration && 
+                               (window as any).swRegistration.active;
+      
+      // First try with service worker if available
+      if (hasServiceWorker) {
         try {
-          // Dynamic import to avoid TypeScript conflicts
-          const webLLM = await import('@mlc-ai/web-llm');
-          
-          // Properly await the engine creation
-          this.engine = await webLLM.CreateServiceWorkerMLCEngine(
-            modelName,
-            { initProgressCallback }
-          );
+          console.log("Attempting to initialize WebLLM with service worker");
+          engine = await webllm.CreateServiceWorkerMLCEngine(modelId, workerOptions);
+          console.log("Successfully initialized WebLLM with service worker");
         } catch (swError) {
-          console.error('Error creating service worker engine:', swError);
-          console.log('Falling back to regular engine');
-          // Fall back to regular engine if service worker fails
-          this.loadingProgress = 'Service worker failed, falling back to regular engine...';
-          
-          // Import the regular engine creator
-          const webLLM = await import('@mlc-ai/web-llm');
-          this.engine = await webLLM.CreateMLCEngine(
-            modelName,
-            { initProgressCallback }
-          );
+          console.warn("Service worker initialization failed, falling back to standard WebLLM:", swError);
+          engine = null;
         }
       } else {
-        console.log('No active service worker, using regular engine');
-        // Import the regular engine creator
-        const webLLM = await import('@mlc-ai/web-llm');
-        this.engine = await webLLM.CreateMLCEngine(
-          modelName,
-          { initProgressCallback }
-        );
+        console.log("No active service worker, using standard WebLLM");
       }
-
+      
+      // Fall back to standard WebLLM if service worker approach failed
+      if (!engine) {
+        try {
+          console.log(`Initializing standard WebLLM with model: ${modelId}`);
+          engine = await webllm.CreateMLCEngine(modelId, workerOptions);
+          console.log("Successfully initialized WebLLM without service worker");
+        } catch (error) {
+          console.error("Failed to initialize standard WebLLM:", error);
+          throw error;
+        }
+      }
+      
+      // Store the engine in window for global access
+      (window as any).mlcEngine = engine;
+      
       this.modelLoaded = true;
-      this.loadingProgress = 'Model Loaded!';
-      this.progressValue = 1;
-      console.log('Model Loaded!');
+      console.log('WebLLM initialized successfully');
     } catch (error) {
-      console.error('Error loading model:', error);
-      this.loadingProgress = `Error loading model: ${error}`;
+      console.error('Failed to initialize WebLLM:', error);
+      this.loadingProgress = "Failed to load model. Please refresh the page.";
     }
   }
 
-  private loadConversations(): void {
-    this.conversations = this.conversationService.getConversations();
+  private async setupServiceWorker() {
+    // First register the Angular service worker (ngsw) which is configured automatically
+    if (this.swUpdate.isEnabled) {
+      console.log("Angular service worker is enabled");
+    }
+    
+    // Then try to register our custom service worker for WebLLM
+    await this.registerCustomServiceWorker();
+  }
 
-    // Create an initial conversation if none exists
-    if (this.conversations.length === 0) {
-      this.createNewChat();
+  private async registerCustomServiceWorker(): Promise<boolean> {
+    if (!("serviceWorker" in navigator)) {
+      console.warn("Service workers are not supported by this browser");
+      return false;
+    }
+    
+    try {
+      // Use a simple service worker at the root path for maximum compatibility
+      const swUrl = `${window.location.origin}/sw.js`;
+      console.log(`Registering service worker from: ${swUrl}`);
+      
+      const registration = await navigator.serviceWorker.register(swUrl, {
+        scope: '/'
+      });
+      
+      let message = "Unknown service worker state";
+      if (registration.installing) {
+        message = "Service worker is installing";
+      } else if (registration.waiting) {
+        message = "Service worker is installed and waiting";
+      } else if (registration.active) {
+        message = "Service worker is active";
+      }
+      
+      console.log(message);
+      console.log("Service worker registration successful");
+      
+      // Store the registration for future use
+      (window as any).swRegistration = registration;
+      return true;
+    } catch (error) {
+      console.error("Service worker registration failed:", error);
+      
+      // Log helpful debugging information
+      if (window.location.protocol === 'file:') {
+        console.error("Service workers cannot run with file:// protocol. Use a web server.");
+      } else if (window.location.hostname !== 'localhost' && !window.location.protocol.includes('https')) {
+        console.error("Service workers require HTTPS unless on localhost.");
+      }
+      
+      return false;
     }
   }
 
-  public createNewChat(): void {
-    const newConversation = this.conversationService.createNewConversation();
-    this.conversations = this.conversationService.getConversations();
-    this.router.navigate(['/folder/inbox']);
-  }
-
-  public selectConversation(id: string): void {
-    this.conversationService.setActiveConversation(id);
-    this.router.navigate(['/folder/inbox']);
-  }
-
-  public startEditingTitle(conversation: ConversationSession): void {
-    this.editingConversation = { ...conversation };
-  }
-
-  public saveTitle(id: string, title: any): void {
-    // Convert input value to string to avoid type errors
-    const titleString = title && title.toString ? title.toString().trim() : '';
-
-    if (titleString) {
-      this.conversationService.updateConversationTitle(id, titleString);
-      this.editingConversation = null;
-      this.conversations = this.conversationService.getConversations();
+  private checkForUpdates(): void {
+    if (this.swUpdate.isEnabled) {
+      // Allow the app to stabilize first, then check for updates
+      setTimeout(() => {
+        this.swUpdate.checkForUpdate().then(() => console.log('Check for updates completed'));
+      }, 10000);
+      
+      // Subscribe to version updates
+      this.swUpdate.versionUpdates
+        .pipe(filter((evt): evt is VersionReadyEvent => evt.type === 'VERSION_READY'))
+        .subscribe(evt => {
+          console.log(`Current app version: ${evt.currentVersion.hash}`);
+          console.log(`New app version ready for use: ${evt.latestVersion.hash}`);
+          
+          // Reload the page to update to the latest version
+          window.location.reload();
+        });
     }
-  }
-
-  public cancelEditing(): void {
-    this.editingConversation = null;
-  }
-
-  public deleteConversation(id: string, event: Event): void {
-    event.stopPropagation(); // Prevent navigation
-    if (confirm('Are you sure you want to delete this conversation?')) {
-      this.conversationService.deleteConversation(id);
-      this.conversations = this.conversationService.getConversations();
-    }
-  }
-
-  public formatDate(date: Date): string {
-    return new Date(date).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
-
-  // Method to get the progress value for the progress bar
-  public getProgressValue(): number {
-    return this.progressValue;
   }
 }
